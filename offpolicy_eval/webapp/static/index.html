@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>离线策略评估 · 搜索排序</title>
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<header>
+  <h1>搜索排序 · 离线策略评估台</h1>
+  <div class="banner">⚠ 本页所有数字均为<strong>历史日志上的离线估计</strong>，
+    依赖各自方法的适用前提，<strong>不等于、也不应表述为上线后的真实收益</strong>。</div>
+</header>
+
+<nav class="tabs">
+  <button data-tab="overview" class="active">① 数据总览</button>
+  <button data-tab="tasks">② 评估任务</button>
+  <button data-tab="compare">③ 策略对比</button>
+  <button data-tab="contrib">④ 逐查询贡献</button>
+  <button data-tab="support">⑤ 无支持区域 / 权重诊断</button>
+  <button data-tab="reports">⑥ 保存的报告</button>
+</nav>
+
+<main>
+<!-- ① 总览 -->
+<section id="tab-overview" class="tab active">
+  <h2>数据总览</h2>
+  <div id="ov-kpis" class="kpi-row"></div>
+  <h3>数据版本（cutoff 快照，只增不改）</h3>
+  <table id="ov-versions" class="grid"></table>
+  <h3>策略版本</h3>
+  <table id="ov-strategies" class="grid"></table>
+</section>
+
+<!-- ② 任务 -->
+<section id="tab-tasks" class="tab">
+  <h2>评估任务</h2>
+  <div class="card">
+    <h3>新建任务（创建后口径即冻结）</h3>
+    <div class="form">
+      <label>任务名 <input id="f-name" placeholder="例如 base|quality@v1|窗口720"></label>
+      <label>数据版本
+        <select id="f-dv"></select></label>
+      <label>目标策略
+        <select id="f-strategy"></select></label>
+      <label>奖励指标
+        <select id="f-metric">
+          <option value="revenue">净收入 revenue</option>
+          <option value="conv">成交数 conv</option>
+          <option value="click">点击数 click</option>
+        </select></label>
+      <label>归因窗口(小时)
+        <input id="f-window" type="number" value="720"></label>
+      <label>退款口径
+        <select id="f-refund">
+          <option value="arrival">arrival 到达才计（旧线上口径）</option>
+          <option value="occurrence">occurrence 按发生时间（换版修正）</option>
+          <option value="ignore">ignore 忽略退款（仅敏感性分析）</option>
+        </select></label>
+      <label>IPS 截断阈值
+        <input id="f-clip" type="number" value="20"></label>
+      <label>重放匹配数 replay_k
+        <input id="f-replayk" type="number" value="3" min="1" max="10"></label>
+      <label>Bootstrap 次数
+        <input id="f-boot" type="number" value="300"></label>
+      <label class="checks">方法
+        <span id="f-methods"></span></label>
+      <button id="f-create">创建任务</button>
+    </div>
+    <p class="hint">任务一旦创建，策略、归因窗口、退款换版规则与方法参数全部固定；
+      迟到日志只会进入新数据版本，不会改动旧任务样本。</p>
+  </div>
+  <table id="task-table" class="grid"></table>
+</section>
+
+<!-- ③ 对比 -->
+<section id="tab-compare" class="tab">
+  <h2>同口径策略对比</h2>
+  <p class="hint">仅允许 comparability_key 相同（同数据版本口径、同方法参数）的任务并排比较；
+    换窗口/换退款口径/换截断阈值属于不同试验，不能混在一组里挑结果。</p>
+  <div class="row">
+    <label>选择口径组 <select id="cmp-group"></select></label>
+    <button id="cmp-refresh">刷新</button>
+  </div>
+  <div id="cmp-meta"></div>
+  <div id="cmp-chart"></div>
+  <table id="cmp-table" class="grid"></table>
+  <div id="cmp-caveats" class="caveats"></div>
+</section>
+
+<!-- ④ 逐查询贡献 -->
+<section id="tab-contrib" class="tab">
+  <h2>逐查询贡献下钻</h2>
+  <div class="row">
+    <label>任务 <select id="ct-task"></select></label>
+    <label>方法 <select id="ct-method"></select></label>
+    <button id="ct-load">加载</button>
+  </div>
+  <div id="ct-summary"></div>
+  <div id="ct-chart"></div>
+  <table id="ct-table" class="grid"></table>
+</section>
+
+<!-- ⑤ 支持区域/权重 -->
+<section id="tab-support" class="tab">
+  <h2>无支持区域与权重稳定性</h2>
+  <div class="row">
+    <label>任务 <select id="sp-task"></select></label>
+    <button id="sp-load">加载</button>
+  </div>
+  <div id="sp-kpis" class="kpi-row"></div>
+  <div id="sp-dist"></div>
+  <h3>极端权重商品（Top 50）</h3>
+  <table id="sp-table" class="grid"></table>
+</section>
+
+<!-- ⑥ 报告 -->
+<section id="tab-reports" class="tab">
+  <h2>保存的报告（append-only）</h2>
+  <div class="row">
+    <label>从任务生成 <select id="rp-task"></select></label>
+    <input id="rp-note" placeholder="报告备注（结论与前提说明）">
+    <button id="rp-save">保存报告</button>
+  </div>
+  <table id="rp-table" class="grid"></table>
+</section>
+</main>
+
+<footer>
+  方法前提：IPS 需要正性与正确倾向；Replay 需要匹配指示与奖励独立；
+  截断/SNIPS 用偏差换方差。未曝光 ≠ 负反馈。
+</footer>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
